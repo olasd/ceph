@@ -103,7 +103,10 @@ def osd_id_exists(osd_id):
 
     output = json.loads(''.join(stdout).strip())
     osds = output['nodes']
-    return any([str(osd['id']) == str(osd_id) for osd in osds])
+    osd = [osd for osd in osds if str(osd['id']) == str(osd_id)]
+    if osd and not osd[0].get('status') == "destroyed":
+        return True
+    return False
 
 
 def mount_tmpfs(path):

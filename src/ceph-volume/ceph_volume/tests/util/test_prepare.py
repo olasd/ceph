@@ -7,23 +7,23 @@ from ceph_volume import conf
 from ceph_volume.tests.conftest import Factory
 
 
-class TestCheckID(object):
+class TestOSDIDExists(object):
 
     def test_false_if_id_is_none(self):
-        assert not prepare.check_id(None)
+        assert not prepare.osd_id_exists(None)
 
     def test_returncode_is_not_zero(self, monkeypatch):
         monkeypatch.setattr('ceph_volume.process.call', lambda *a, **kw: ('', '', 1))
         with pytest.raises(RuntimeError):
-            prepare.check_id(1)
+            prepare.osd_id_exists(1)
 
     def test_id_does_exist(self, monkeypatch):
         stdout = dict(nodes=[
-            dict(id=0),
+            dict(id=0, status="up"),
         ])
         stdout = ['', json.dumps(stdout)]
         monkeypatch.setattr('ceph_volume.process.call', lambda *a, **kw: (stdout, '', 0))
-        result = prepare.check_id(0)
+        result = prepare.osd_id_exists(0)
         assert result
 
     def test_id_does_not_exist(self, monkeypatch):
@@ -32,7 +32,7 @@ class TestCheckID(object):
         ])
         stdout = ['', json.dumps(stdout)]
         monkeypatch.setattr('ceph_volume.process.call', lambda *a, **kw: (stdout, '', 0))
-        result = prepare.check_id(1)
+        result = prepare.osd_id_exists(1)
         assert not result
 
     def test_invalid_osd_id(self, monkeypatch):
@@ -41,7 +41,16 @@ class TestCheckID(object):
         ])
         stdout = ['', json.dumps(stdout)]
         monkeypatch.setattr('ceph_volume.process.call', lambda *a, **kw: (stdout, '', 0))
-        result = prepare.check_id("foo")
+        result = prepare.osd_id_exists("foo")
+        assert not result
+
+    def test_returns_false_when_id_is_destroyed(self, monkeypatch):
+        stdout = dict(nodes=[
+            dict(id=0, status="destroyed"),
+        ])
+        stdout = ['', json.dumps(stdout)]
+        monkeypatch.setattr('ceph_volume.process.call', lambda *a, **kw: (stdout, '', 0))
+        result = prepare.osd_id_exists(0)
         assert not result
 
 
